@@ -1,0 +1,128 @@
+-- [ variables ] --
+
+whitelist =
+{
+    "minecraft:diamond_ore",
+    "minecraft:redstone_ore",
+    "minecraft:lapis_ore",
+    "minecraft:gold_ore",
+    "minecraft:iron_ore",
+    "minecraft:coal_ore"
+}
+
+height, length, info = ...
+depth = 0
+
+
+-- [ functions ] --
+
+-- look for an item in inventory
+function findItem(soughtItem)
+    for slot=1, 16 do
+        local inspectedItem = turtle.getItemDetail(slot)
+        if inspectedItem ~= nil then
+            if inspectedItem == soughtItem then
+                return slot
+            end
+        end
+        return nil
+    end
+end
+
+-- if not enough fuel to return to surface, refuels once from last slot
+-- if it cannot refuel, returns to surface
+function fuel()
+    if turtle.getFuelLevel() < depth-3 then
+        turtle.select(16)
+        turtle.refuel(1)
+        turtle.select(1)
+        if turtle.getFuelLevel() < depth-3 then
+            resurface()
+            print("Ran out of fuel")
+            error()
+        end
+    end
+end
+
+-- checks if block below is bedrock
+function checkBedrock()
+    local temp, blockBelow = turtle.inspectDown()
+
+    if blockBelow.name == "minecraft:bedrock" then
+        return true
+    else
+        return false
+    end
+end
+
+-- digs down to bedrock, then goes back up to input height
+function digToHeight(height)
+    while checkBedrock() == false do
+        turtle.digDown()
+        fuel()
+        turtle.down()
+        depth = depth + 1
+    end
+
+    for i = 1, height-1 do
+        fuel()
+        turtle.up()
+        depth = depth - 1
+    end
+end
+
+-- checks if 
+function checkAndDig(inspection)
+    temp, inspectedBlock = inspection
+    if inspectedBlock ~= nil then
+        for i=1, #whitelist do
+            if inspectedBlock.name == whitelist[i] then
+                return true
+            end
+        end
+    end
+end
+
+-- digs, scans and strips a tunnel to input length
+function tunnel(length)
+    for lengthTraveled = 1, length-1 do
+        if checkAndDig(turtle.inspectUp()) then turtle.digUp() end
+        if checkAndDig(turtle.inspectDown()) then turtle.digDown() end
+        turtle.turnLeft()
+        if checkAndDig(turtle.inspect()) then turtle.dig() end
+        turtle.turnRight()
+        turtle.turnRight()
+        if checkAndDig(turtle.inspect()) then turtle.dig() end
+        turtle.turnLeft()
+        turtle.dig()
+        fuel()
+        turtle.forward()
+    end
+end
+
+-- comes back to starting height + 3
+function resurface()
+    while depth > -2 do
+        turtle.digUp()
+        fuel()
+        turtle.up()
+        depth = depth - 1
+    end
+end
+
+
+-- [ program ] --
+
+-- give syntax if no arguments are given
+if length == nil then
+    print("Arguments: height, length, [info]")
+    error()
+end
+
+-- give info
+if info ~= nil then
+    print("Fuel needed: about", length+140+height*2, "units")
+    print("(at least", math.floor((length+140+height*2)/80+1), "pieces of coal)")
+    error()
+end
+
